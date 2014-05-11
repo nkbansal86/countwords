@@ -4,33 +4,34 @@ An HTTP word count utility in Java
 
 System Requirements
 ===================
-Windows 7/8
-Netbeans IDE 8.0
-Glassfish server 4.0 (usually bundled with netbeans IDE)
-JDK 1.7.0_55
+1. Windows 7/8
+2 Netbeans IDE 8.0
+3. Glassfish server 4.0 (usually bundled with netbeans IDE)
+4. JDK 1.7.0_55
 
 CONFIGURATION
 =============
 1. web.xml
-i) init parameter - filePath: Update the parameter to point to the location of the directory
-ii) init parameter - delimeter: The delimeter separating the words in the corpus. Default is ",". To use whitespace update whitespace enclosed in double quotes e.g " "
+  * init parameter - filePath: Update the parameter to point to the location of the directory
+  * init parameter - delimeter: The delimeter separating the words in the corpus. Default is ",". To use whitespace update whitespace enclosed in double quotes e.g " "
 
 
 BUILD
 =====
 1. Set JAVA_HOME environment variable to point to latest version of jdk
 e.g. c:\>set JAVA_HOME=C:\Program Files\Java\jdk1.7.0_55
+
 2. Build the war file from the directory containing the countwords folder
-<Path to ant bin> -f <project directory location> -Dbrowser.context=<project directory location> -DforceRedeploy=false -Ddirectory.deployment.supported=true -Dnb.wait.for.caches=true -Dnb.internal.action.name=build dist
+ant -f <project directory location> -Dbrowser.context=<project directory location> -DforceRedeploy=false -Ddirectory.deployment.supported=true -Dnb.wait.for.caches=true -Dnb.internal.action.name=build dist
 e.g.
-c:\> cd C:\\Users\\nkbansal\\Documents\\GitHub
-c:\> "C:\Program Files\NetBeans 8.0\extide\ant" -f countwords -Dbrowser.context=C:\\Users\\nkbansal\\Documents\\GitHub\\countwords -DforceRedeploy=false -Ddirectory.deployment.supported=true -Dnb.wait.for.caches=true -Dnb.internal.action.name=run run
+  * c:\> cd C:\\Users\\nkbansal\\Documents\\GitHub
+  * c:\> "C:\Program Files\NetBeans 8.0\extide\ant" -f countwords -Dbrowser.context=C:\\Users\\nkbansal\\Documents\\GitHub\\countwords -DforceRedeploy=false -Ddirectory.deployment.supported=true -Dnb.wait.for.caches=true -Dnb.internal.action.name=run run
 
 3. Deploy
-i)Open GlassFish server admin consol
-ii) Navigate to applications
-iii) Click Deploy and browse to the location to the war file e.g. C:\Users\nkbansal\Documents\GitHub\countwords\dist\countword.war
-iv) Click OK to complete the deployment.
+  * Open GlassFish server admin consol
+  * Navigate to applications
+  * Click Deploy and browse to the location to the war file e.g. C:\Users\nkbansal\Documents\GitHub\countwords\dist\countword.war
+  * Click OK to complete the deployment.
 
 RUN
 =====
