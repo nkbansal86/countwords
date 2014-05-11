@@ -6,7 +6,8 @@ System Requirements
 ===================
 Windows 7/8
 Netbeans IDE 8.0
-Glassfish server bundled with netbeans
+Glassfish server 4.0 (usually bundled with netbeans IDE)
+JDK 1.7.0_55
 
 CONFIGURATION
 =============
@@ -36,6 +37,11 @@ RUN
 1. From GlassFish server admin consol, navigate to Applications
 2. countwords will be listed among other applications, click Launch to view the deployment Links
 3. Click any of the deployment links, it will display {"count": -1} as the output
-4. Edit the URL to add /?query=<word> to get the desired result.
+4. Edit the URL to add /?query=<word> and submit to test the application.
 
 RUN using Netbeans
+==================
+1. Import the project into netbeans IDE
+2. Right click on the project and select Run
+3. The build log will display the URL to access the application as well
+4. Copy paste the URL to the browser and append /?query=<searchword> and submit to test the application
