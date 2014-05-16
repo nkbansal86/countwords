@@ -6,9 +6,14 @@
 
 package countwords.src;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
@@ -16,10 +21,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
+import javax.servlet.UnavailableException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -30,27 +38,28 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class CountWords extends HttpServlet {
 
-    /**
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
-     * methods.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
+
     protected String filePath = null;
-    protected byte delimeter;
-    private static final int MAPSIZE = 4 * 1024 ;
+    protected String delimeter;
+    private Map<String, Integer> counts = null;
+
+    /**
+     *
+     * @param servletConfig
+     * @throws ServletException
+     */
+    @Override
     public void init(ServletConfig servletConfig) throws ServletException{
+        super.init(servletConfig);
         this.filePath = servletConfig.getInitParameter("filePath");
-        this.delimeter = servletConfig.getInitParameter("delimeter").getBytes(StandardCharsets.UTF_8)[1];
+        delimeter = servletConfig.getInitParameter("delimeter");
+        this.delimeter = delimeter.substring(1, delimeter.length()-1);
+        this.counts = new HashMap<String, Integer>();
         //this.delimeter = " ".getBytes(StandardCharsets.UTF_8)[0];
+        loadData(this.filePath);
+        //getServletContext().setAttribute("counts", counts);
     }
-    private int getCount(String inputSearch) throws IOException{
-        String paddedInput = delimeter + inputSearch + delimeter;
-        String paddedInputStart = inputSearch + delimeter;
-        String paddedInputEnd = delimeter +inputSearch ;
+    private void loadData(String filePath) throws UnavailableException{
         File folder = new File(filePath);
         File[] listOfFiles;
         if (folder.isDirectory()){
@@ -60,72 +69,61 @@ public class CountWords extends HttpServlet {
             listOfFiles[0]=folder;
         }
         int count=0;
+        Map<String, Integer> counts = new HashMap<String, Integer>();
         for (File file : listOfFiles) {
             
             if (file.isFile()) {
-                System.out.println("Searching in file:"+file.getPath());
-                count+=searchFor(Paths.get(file.getPath()), inputSearch);
-            }
-        }
-        return count;
-    }
-    private int searchFor(Path path, String grepFor) throws IOException{
-        final byte[] tosearch = grepFor.getBytes(StandardCharsets.UTF_8);
-        //StringBuilder report = new StringBuilder();
-        int padding = 1; // need to scan 1 character ahead in case it is a word boundary.
-        //int linecount = 0;
-        int matches = 0;
-        boolean inword = false;
-        boolean scantolineend = false;
-        try (FileChannel channel = FileChannel.open(path, StandardOpenOption.READ)){
-            final long length = channel.size();
-            int pos = 0;
-            while(pos < length) {
-                long remaining = length - pos;
-                // int conversion is safe because of a safe MAPSIZE.. Assume a reaosnably sized tosearch.
-                int trymap = MAPSIZE + tosearch.length + padding;
-                int tomap = (int)Math.min(trymap, remaining);
-                // different limits depending on whether we are the last mapped segment.
-                int limit = trymap == tomap ? MAPSIZE : (tomap - tosearch.length);
-                MappedByteBuffer buffer = channel.map(MapMode.READ_ONLY, pos, tomap);
-                //System.out.println("Mapped from " + pos + " for " + tomap);
-                pos += (trymap == tomap) ? MAPSIZE : tomap;
-                for (int i = 0; i < limit; i++) {
-                    final byte b = buffer.get(i);
-                    if (b == '\r' || b=='\n' || b == delimeter) {
-                        inword = false;
-                    } else if (!inword) {
-                        if (findMatch(buffer, i, tomap, tosearch)) {
-                            matches++;
-                            i += tosearch.length - 1;
-                        } else {
-                            inword = true;
-                        }
-                    }
+                System.out.println("Scanning the file:"+file.getPath());
+                try {
+                    scanFile(file);
+                } catch (FileNotFoundException ex) {
+                    Logger.getLogger(CountWords.class.getName()).log(Level.SEVERE, null, ex);
+                    throw new UnavailableException(this,"File not found:"+file.getAbsolutePath());
                 }
             }
-            channel.close();
-        } 
-        return matches;
+        }
     }
-    private boolean findMatch(MappedByteBuffer buffer, int pos, int tomap, byte[] tosearch) {
-        String temp = new String(tosearch, StandardCharsets.UTF_8);
-        temp = temp.toUpperCase();
-        byte[] toSearchUpper = temp.getBytes(StandardCharsets.UTF_8);
-        //assume at valid word start.
-        for (int i = 0; i < tosearch.length; i++) {
-            byte b = buffer.get(pos+i);
-            System.out.print(String.format("b:%s, tosearch:%s, toSearchUpper: %s", b, tosearch[i], toSearchUpper[i]));
-            if (tosearch[i] != b && toSearchUpper[i] != b) {
-                return false;
+    private void scanFile(File file) throws FileNotFoundException, UnavailableException{
+        BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8));
+        String line;
+        while(true){
+            try {
+                line = in.readLine();
+            } catch (IOException ex) {
+                throw new UnavailableException(this,"Exception occured while reading file:"+file.getAbsolutePath());
+            }
+            if (line==null){
+                break;
+            }
+            String[] words = line.split(delimeter);
+            for(int i=0; i<words.length; i++){
+                String word = words[i].toLowerCase();
+                if(counts.containsKey(word)){
+                    counts.put(word, Integer.valueOf(counts.get(word)+1));
+                    System.out.println("Increasing count for word '"+word+"'");
+                }
+                else{
+                    counts.put(word, Integer.valueOf(1));
+                    System.out.println("Adding new word '"+word+"'");
+                }
             }
         }
-        byte nxt = (pos + tosearch.length) == tomap ? (byte)delimeter : buffer.get(pos + tosearch.length); 
-        System.out.println("nxt:"+nxt+", delimeter:"+(byte)delimeter);
-        boolean result= nxt == delimeter || nxt == '\n' || nxt == '\r';
-        System.out.println("Result:"+result);
-        return result;
     }
+    private int getCount(String inputSearch) throws IOException{
+        if(counts.containsKey(inputSearch)){
+            return counts.get(inputSearch);
+        }
+        return 0;
+    }
+    /**
+     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
+     * methods.
+     *
+     * @param request servlet request
+     * @param response servlet response
+     * @throws ServletException if a servlet-specific error occurs
+     * @throws IOException if an I/O error occurs
+     */    
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         response.setContentType("application/json");
